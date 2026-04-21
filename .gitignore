@@ -1,0 +1,11 @@
+hibachi-cli
+hibachi
+/dist/
+/bin/
+*.log
+.DS_Store
+.claude/
+CLAUDE.md
+coverage.out
+*.test
+*.prof

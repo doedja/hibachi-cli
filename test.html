@@ -1,0 +1,1218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="hibachi-cli. Terminal trading on Hibachi perpetual futures. Natural language, powered by Claude. Dashboard, agents, AI advisor.">
+<meta name="theme-color" content="#0a0b0d">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="hibachi-cli. Terminal trading, natural language.">
+<meta property="og:description" content="Trade Hibachi perpetuals by typing what you want. Claude plans, you approve, the SDK fires. Live dashboard, AI agents, switchable backends.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://doedja.github.io/hibachi-cli/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="hibachi-cli. Terminal trading, natural language.">
+<meta name="twitter:description" content="Trade Hibachi perpetuals by typing what you want.">
+<title>hibachi-cli. Terminal trading, natural language.</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230a0b0d'/><text x='32' y='46' font-family='ui-monospace,Menlo,monospace' font-size='42' font-weight='700' text-anchor='middle' fill='%23c678dd'>&#8250;</text></svg>">
+<style>
+  /* tokens */
+  :root {
+    --bg: #0a0b0d;
+    --bg-soft: #0f1114;
+    --panel: #111315;
+    --panel-2: #15171b;
+    --border: #22262c;
+    --border-2: #2d3138;
+    --text: #e8e8ec;
+    --text-2: #bcc0c8;
+    --muted: #7a7f89;
+    --dim: #525762;
+    --prompt: #98c379;
+    --cmd: #ffffff;
+    --header: #56b6c2;
+    --ai: #c678dd;
+    --ok: #98c379;
+    --warn: #e5c07b;
+    --err: #e06c75;
+    --accent: #61afef;
+    --orange: #d19a66;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Inter", Roboto, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01","cv11","cv05";
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* ambient gradient wash */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(1100px 520px at 8% -10%, rgba(198,120,221,0.10), transparent 55%),
+      radial-gradient(900px 480px at 102% 10%, rgba(97,175,239,0.07), transparent 55%),
+      radial-gradient(700px 400px at 50% 120%, rgba(152,195,121,0.04), transparent 60%);
+  }
+  /* faint grid */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--text); }
+  code { font-family: var(--mono); font-size: 0.92em; }
+
+  /* nav */
+  nav.top {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    background: rgba(10,11,13,0.55);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  nav.top .inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  nav.top .brand {
+    font-family: var(--mono);
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+  nav.top .brand .chev { color: var(--ai); font-weight: 700; }
+  nav.top .links {
+    display: flex;
+    gap: 4px;
+    margin-left: 24px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    flex-wrap: wrap;
+  }
+  nav.top .links a {
+    color: var(--muted);
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: color .15s, background .15s;
+  }
+  nav.top .links a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  nav.top .right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  nav.top .right a.gh {
+    color: var(--text-2);
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all .15s;
+  }
+  nav.top .right a.gh:hover { color: var(--text); border-color: var(--border-2); background: rgba(255,255,255,0.03); }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 120px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* hero */
+  section.hero {
+    padding: 80px 0 56px;
+    max-width: 980px;
+  }
+  .hero .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(17,19,21,0.5);
+    margin-bottom: 24px;
+  }
+  .hero .eyebrow .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--ai);
+    box-shadow: 0 0 8px var(--ai);
+  }
+  .hero h1 {
+    font-size: clamp(40px, 7.2vw, 76px);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.015;
+    margin: 0 0 22px;
+    color: var(--text);
+  }
+  .hero h1 .hl {
+    background: linear-gradient(180deg, #d89bed 0%, #a056bf 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero .lead {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--text-2);
+    max-width: 660px;
+    margin: 0 0 32px;
+  }
+  .hero .lead b { color: var(--text); font-weight: 500; }
+
+  .install {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    max-width: 560px;
+    margin-bottom: 36px;
+  }
+  .install .cmd {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13.5px;
+    white-space: pre;
+    overflow-x: auto;
+    display: flex;
+    align-items: center;
+  }
+  .install .cmd .prompt { color: var(--prompt); margin-right: 8px; }
+  .install .copy {
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    transition: all .15s;
+    min-width: 80px;
+  }
+  .install .copy:hover {
+    color: var(--text);
+    border-color: var(--border-2);
+    background: var(--panel-2);
+  }
+  .install .copy.copied { color: var(--ok); border-color: rgba(152,195,121,0.4); }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-2);
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(17,19,21,0.5);
+    white-space: nowrap;
+  }
+
+  /* chapter heading */
+  .chapter {
+    margin: 110px 0 36px;
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    scroll-margin-top: 80px;
+  }
+  .chapter .marker {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    width: 40px;
+    flex-shrink: 0;
+  }
+  .chapter h2 {
+    font-size: clamp(22px, 3.4vw, 32px);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin: 0;
+    flex: 1;
+    color: var(--text);
+  }
+  .chapter .hint {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* demo section */
+  section.demo { margin-bottom: 44px; }
+  section.demo .label {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  section.demo .label .num {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    min-width: 24px;
+  }
+  section.demo .label h3 {
+    font-size: 17px;
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  section.demo .label .flavor {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  section.demo .caption {
+    font-size: 14.5px;
+    color: var(--muted);
+    margin: 0 0 16px 38px;
+    max-width: 780px;
+    line-height: 1.6;
+  }
+
+  /* terminal */
+  .terminal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.025) inset,
+      0 30px 60px -30px rgba(0,0,0,0.75),
+      0 0 0 1px rgba(255,255,255,0.01);
+    margin-left: 38px;
+    position: relative;
+  }
+  .terminal::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 20%);
+  }
+  .terminal .bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    background: linear-gradient(180deg, #1b1e22 0%, #141619 100%);
+    border-bottom: 1px solid rgba(0,0,0,0.35);
+    position: relative;
+  }
+  .terminal .bar .dots {
+    display: flex;
+    gap: 7px;
+  }
+  .terminal .bar .dots span {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35) inset;
+  }
+  .terminal .bar .dots span:nth-child(1) { background: #ff5f57; }
+  .terminal .bar .dots span:nth-child(2) { background: #febc2e; }
+  .terminal .bar .dots span:nth-child(3) { background: #28c840; }
+  .terminal .bar .title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+  }
+  .terminal pre {
+    font-family: var(--mono);
+    font-size: 13.2px;
+    line-height: 1.65;
+    margin: 0;
+    padding: 22px 24px;
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+    tab-size: 2;
+  }
+  .terminal.dash pre { font-size: 12px; line-height: 1.5; padding: 22px 18px; }
+  .terminal.hero-term { margin-left: 0; margin-top: 8px; }
+  .terminal.hero-term pre { font-size: 14px; padding: 26px 28px; }
+
+  /* tokens (inside terminal) */
+  .p   { color: var(--prompt); }
+  .c   { color: var(--cmd); font-weight: 500; }
+  .m   { color: var(--muted); }
+  .d   { color: var(--dim); }
+  .h   { color: var(--header); font-weight: 500; }
+  .ai  { color: var(--ai); }
+  .ok  { color: var(--ok); }
+  .wn  { color: var(--warn); }
+  .er  { color: var(--err); }
+  .ac  { color: var(--accent); }
+  .or  { color: var(--orange); }
+  .b   { font-weight: 600; color: #fff; }
+  .i   { font-style: italic; color: #b9bdc6; }
+  .rule { color: var(--border-2); }
+
+  .caret {
+    display: inline-block;
+    width: 8px; height: 15px;
+    background: var(--text);
+    vertical-align: -2px;
+    margin-left: 2px;
+    animation: blink 1.1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    vertical-align: 1px;
+  }
+  .pill.live { background: #1f2d1f; color: #98c379; border: 1px solid #2f4930; }
+  .pill.warn { background: #2d2620; color: #e5c07b; border: 1px solid #4a3f2c; }
+  .pill.ai   { background: #2a1f30; color: #c678dd; border: 1px solid #432c4d; }
+
+  /* typing hero */
+  .type-wrap { min-height: 1.5em; display: inline-block; }
+  .type-wrap .typed { color: var(--cmd); font-weight: 500; }
+  .type-wrap .tcaret {
+    display: inline-block;
+    width: 9px; height: 17px;
+    background: var(--ai);
+    vertical-align: -3px;
+    margin-left: 2px;
+    animation: blink 0.9s steps(2) infinite;
+    box-shadow: 0 0 8px rgba(198,120,221,0.5);
+  }
+  .hero-out {
+    min-height: 0;
+    transition: min-height .3s;
+    color: var(--text-2);
+    font-size: 13px;
+    white-space: pre;
+  }
+  .hero-out .dim { color: var(--dim); }
+  .hero-out .ok  { color: var(--ok); }
+
+  /* reveal on scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .6s cubic-bezier(.2,.65,.3,1), transform .6s cubic-bezier(.2,.65,.3,1);
+  }
+  .reveal.shown { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .caret, .type-wrap .tcaret { animation: none; }
+  }
+
+  /* footer */
+  footer.page {
+    margin-top: 120px;
+    padding: 40px 0 24px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    font-size: 13.5px;
+    color: var(--text-2);
+  }
+  footer.page .brand-col .brand {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  footer.page .brand-col .brand .chev { color: var(--ai); }
+  footer.page .brand-col p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+    max-width: 340px;
+  }
+  footer.page .col .head {
+    color: var(--muted);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-family: var(--mono);
+  }
+  footer.page .col a {
+    display: block;
+    color: var(--text-2);
+    padding: 3px 0;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  footer.page .col a:hover { color: var(--text); }
+  footer.page .meta-row {
+    grid-column: 1 / -1;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--dim);
+  }
+  footer.page .meta-row .note { color: var(--muted); }
+
+  /* mobile */
+  @media (max-width: 820px) {
+    nav.top .links { display: none; }
+    .hero { padding: 56px 0 32px; }
+    .hero h1 { font-size: 38px; }
+    .hero .lead { font-size: 16px; }
+    .install { flex-direction: column; }
+    .install .copy { min-width: 0; padding: 10px; }
+    section.demo .caption, .terminal { margin-left: 0; }
+    .chapter { margin: 72px 0 28px; }
+    .chapter h2 { font-size: 20px; }
+    section.demo .label { flex-wrap: wrap; }
+    section.demo .label .flavor { margin-left: 0; width: 100%; flex-basis: 100%; }
+    footer.page { grid-template-columns: 1fr 1fr; gap: 28px; }
+    footer.page .brand-col { grid-column: 1 / -1; }
+    .terminal pre { font-size: 12.5px; padding: 18px 16px; }
+    .terminal.dash pre { font-size: 10.5px; padding: 16px 12px; }
+  }
+</style>
+</head>
+
+<body>
+
+<nav class="top">
+  <div class="inner">
+    <div class="brand">hibachi<span class="chev">&#8250;</span></div>
+    <div class="links">
+      <a href="#essentials">essentials</a>
+      <a href="#chat">chat &amp; memory</a>
+      <a href="#agents">agents</a>
+      <a href="#direct">direct</a>
+      <a href="#dash">dashboard</a>
+      <a href="#backends">backends</a>
+    </div>
+    <div class="right">
+      <a class="gh" href="https://github.com/doedja/hibachi-cli" target="_blank" rel="noopener">github</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+<section class="hero">
+  <div class="eyebrow"><span class="dot"></span>hibachi-cli / v0.1 preview</div>
+  <h1>Trade Hibachi perpetuals <span class="hl">by typing what you want.</span></h1>
+  <p class="lead">A terminal for the Hibachi exchange. Plain-English prompts become SDK calls through <b>Claude</b>. Every plan previews before it fires. Memory grows between sessions. Dry-run is the default.</p>
+
+  <div class="install">
+    <code class="cmd"><span class="prompt">$</span>go install github.com/doedja/hibachi-cli@latest</code>
+    <button class="copy" id="copy-install" type="button" aria-label="Copy install command">copy</button>
+  </div>
+
+  <div class="tags">
+    <span class="tag">natural language</span>
+    <span class="tag">claude code &amp; openrouter</span>
+    <span class="tag">live dashboard</span>
+    <span class="tag">markdown memory</span>
+    <span class="tag">sqlite journal</span>
+    <span class="tag">dry-run by default</span>
+    <span class="tag">cobra + hibachi-go</span>
+  </div>
+
+  <!-- hero animated terminal -->
+  <div class="terminal hero-term reveal">
+    <div class="bar">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="title">~/work &nbsp;&mdash;&nbsp; hibachi</div>
+    </div>
+<pre><span class="p">$</span> <span class="type-wrap"><span class="typed" id="type-demo"></span><span class="tcaret"></span></span>
+
+<span class="hero-out" id="type-out"></span></pre>
+  </div>
+</section>
+
+<!-- CHAPTER 1: ESSENTIALS -->
+<div class="chapter" id="essentials">
+  <span class="marker">I.</span>
+  <h2>Type what you want.</h2>
+  <span class="hint">NL &rarr; plan &rarr; approve &rarr; fire</span>
+</div>
+
+<!-- 01 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">01</span>
+    <h3>Natural-language limit order</h3>
+    <span class="flavor">root fallback &rarr; ai planner</span>
+  </div>
+  <p class="caption">Anything that isn't a known subcommand routes to the AI planner. Claude parses units, rounds to tick size, and returns a plan. Nothing fires until you approve.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">~/work &nbsp;&mdash;&nbsp; hibachi</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi buy btc 1000 usd at 72000</span>
+
+<span class="h">Plan</span>
+<span class="rule">────</span>
+  <span class="b">LIMIT BUY</span>  BTC/USDT-P
+    size     <span class="ac">0.01388 BTC</span>  <span class="m">(&asymp; $1,000.00 notional @ 72,000)</span>
+    price    <span class="ac">72,000.00</span>    <span class="m">(tick 0.01 ok)</span>
+    flags    <span class="m">(none)</span>
+    max fee  0.05%
+
+<span class="h">Memory change</span> <span class="m">(+1 line)</span>
+  <span class="ai">lessons.md</span>  "user prefers USD-notional sizing and round price points"
+
+<span class="h">Claude's reasoning</span>
+  <span class="i">Straightforward limit buy. Price is 3.6% below current mark</span>
+  <span class="i">(74,680), so this rests on the book rather than crossing.</span>
+  <span class="i">No TP/SL requested.</span>
+
+Submit? <span class="b">[y]</span>es / <span class="b">[n]</span>o / <span class="b">[e]</span>dit / <span class="b">[d]</span>ry-run only: <span class="c">y</span>
+
+<span class="ok">[ok]</span> Order placed. ID <span class="ac">8472910</span>. Resting on book.
+     Journal entry #00412 written.<span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- 02 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">02</span>
+    <h3>Ambiguous size, Claude asks back</h3>
+    <span class="flavor">ask action + same session --resume</span>
+  </div>
+  <p class="caption">When a size unit is ambiguous, Claude returns <code>ask</code> instead of guessing. The clarification uses the same session so context carries turn to turn.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi buy 1 btc</span>
+
+<span class="h">Claude needs a clarification</span>
+  "1 BTC" at current mark is ~$74,680. Did you mean:
+    <span class="b">[a]</span>  1 BTC               <span class="m">(&asymp; $74,680 notional)</span>
+    <span class="b">[b]</span>  $1 notional         <span class="m">(&asymp; 0.0000134 BTC)</span>
+<span class="p">&gt;</span> <span class="c">a</span>
+
+<span class="h">Plan</span>
+<span class="rule">────</span>
+  <span class="b">MARKET BUY</span>  BTC/USDT-P
+    size     <span class="ac">1.00000 BTC</span>  <span class="m">(&asymp; $74,680 notional)</span>
+    max fee  0.05%
+
+<span class="wn">[warn]</span> Above safety.max_notional_usd ($100). Requires <span class="c">--allow-large</span>.
+
+Retry with --allow-large? <span class="b">[y/N]</span>: <span class="c">n</span>
+<span class="d">aborted.</span><span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- 03 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">03</span>
+    <h3>Read-only query, no confirm step</h3>
+    <span class="flavor">get_* actions only &rarr; skip confirm</span>
+  </div>
+  <p class="caption">When every action in the plan is a read, the CLI runs without the approval prompt. Numbers format to locale, PnL colors signed.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi what's my pnl today</span>
+
+<span class="d">Fetching: account info, positions, settlements.</span>
+
+<span class="h">Today</span>  <span class="m">(since 00:00 UTC)</span>
+<span class="rule">───────────────────────</span>
+  Realized      <span class="ok">+$142.30</span>
+  Unrealized     <span class="er">-$18.04</span>   <span class="m">(BTC long, mark below entry)</span>
+  Net           <span class="ok">+$124.26</span>
+
+<span class="h">Claude's note</span>
+  <span class="i">Most of today's realized came from the ETH close at 10:42 UTC</span>
+  <span class="i">(+$118). BTC position is small and still in drawdown; no</span>
+  <span class="i">action suggested.</span><span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- 04 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">04</span>
+    <h3>Multi-step intent, one approval</h3>
+    <span class="flavor">composite plan, sequential execution</span>
+  </div>
+  <p class="caption">"Go flat" fans out into cancel-all and two market closes. One confirm covers the batch. If step 2 fails, step 3 holds for a retry prompt.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi go flat</span>
+
+<span class="h">Plan</span>  <span class="m">(3 actions)</span>
+<span class="rule">─────────────────</span>
+  <span class="d">1.</span> <span class="b">CANCEL</span>       all pending orders                <span class="m">(3 orders)</span>
+  <span class="d">2.</span> <span class="b">MARKET SELL</span>  BTC/USDT-P  <span class="ac">0.0150</span>  <span class="m">(close long)</span>
+  <span class="d">3.</span> <span class="b">MARKET BUY</span>   ETH/USDT-P  <span class="ac">0.4200</span>  <span class="m">(close short)</span>
+
+<span class="h">Estimated net from closes</span>
+  BTC    <span class="ok">+$18.20</span>
+  ETH    <span class="er">-$34.50</span>
+  Total  <span class="er">-$16.30</span> realized
+
+Submit? <span class="b">[y]</span>/n/e/d: <span class="c">y</span>
+
+<span class="ok">[ok]</span> 1/3  Cancelled 3 orders.
+<span class="ok">[ok]</span> 2/3  Filled BTC/USDT-P market sell @ <span class="ac">74,612.30</span>.
+<span class="ok">[ok]</span> 3/3  Filled ETH/USDT-P market buy  @ <span class="ac">3,147.80</span>.
+
+All positions flat. Realized PnL today: <span class="ok">+$107.96</span>.<span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- CHAPTER 2: CHAT & MEMORY -->
+<div class="chapter" id="chat">
+  <span class="marker">II.</span>
+  <h2>A brain that grows between sessions.</h2>
+  <span class="hint">markdown, editable by you or Claude</span>
+</div>
+
+<!-- 05 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">05</span>
+    <h3>Interactive chat (no args)</h3>
+    <span class="flavor">one persistent session across the REPL</span>
+  </div>
+  <p class="caption">Running <code>hibachi</code> with no args drops into chat. A single Claude session runs for the REPL lifetime, so context carries. Mutations still require confirm.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi chat</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi</span>
+
+<span class="h">hibachi-cli chat</span>  <span class="m">(session 4f9a-c2e1, model claude-opus-4-7)</span>
+<span class="d">Type 'exit' to leave. Ctrl+C cancels current turn.</span>
+
+<span class="ai">&#8250;</span> <span class="c">hey whats my biggest exposure right now</span>
+
+<span class="i">Looking at your account.</span>
+
+  <span class="b">ETH/USDT-P short</span>  0.42   <span class="m">(&asymp; $1,321 notional, 3.2x leverage on</span>
+                              <span class="m">your free margin).</span>
+
+<span class="i">That's your largest position by notional. Funding is currently</span>
+<span class="i">-0.012% per 8h, so you're paying to hold it. Position is up</span>
+<span class="i">+$34 since entry.</span>
+
+<span class="ai">&#8250;</span> <span class="c">should i close it</span>
+
+<span class="i">I'd lean toward trimming rather than fully closing. Funding</span>
+<span class="i">turned negative only 6h ago, and mean reversion on ETH funding</span>
+<span class="i">has been ~18h on average this month. Half-close would lock in</span>
+<span class="i">+$17, leaves you exposed if the move continues.</span>
+
+Want me to place a market buy of 0.21? <span class="b">[y/N]</span>
+
+<span class="ai">&#8250;</span> <span class="c">y</span>
+
+<span class="h">Plan</span>
+<span class="rule">────</span>
+  <span class="b">MARKET BUY</span>  ETH/USDT-P  <span class="ac">0.21</span>  <span class="m">(close half of short)</span>
+
+Submit? <span class="b">[y]</span>/n: <span class="c">y</span>
+
+<span class="ok">[ok]</span> Filled @ <span class="ac">3,147.40</span>. Position now 0.21 short, <span class="ok">+$17</span> realized.
+     Remembered: <span class="ai">"user prefers partial closes when funding just</span>
+                 <span class="ai">flipped against them"</span> &rarr; <span class="ai">lessons.md</span><span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- 06 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">06</span>
+    <h3>Memory inspection</h3>
+    <span class="flavor">~/.hibachi/memory/*.md</span>
+  </div>
+  <p class="caption">The brain is plain markdown. Claude reads all of it every turn and edits it when something's worth saving. You can too.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi memory</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi memory show</span>
+
+<span class="m">~/.hibachi/memory/</span>  <span class="d">(3 files, ~1.2k tokens)</span>
+
+<span class="rule">─── </span><span class="ai">user.md</span><span class="rule"> ───────────────────────────────────────────────</span>
+Account 12345. Mid-size trader, $5-15k working capital per
+session. Prefers USD-notional sizing over base-unit. Trades
+BTC and ETH primarily, occasional SOL. Risk-aware: rarely
+above 3x leverage, always uses SL on size > $2000.
+
+<span class="rule">─── </span><span class="ai">lessons.md</span><span class="rule"> ────────────────────────────────────────────</span>
+- DCA at 1h intervals worked well for BTC accumulation in
+  March; same spacing on ETH underperformed (higher vol).
+- User prefers partial closes when funding just flipped
+  against them, rather than full exit.
+- Round-number limit prices (72000, 75000) tend to get
+  front-run; user has accepted this tradeoff for simplicity.
+
+<span class="rule">─── </span><span class="ai">watchlist.md</span><span class="rule"> ──────────────────────────────────────────</span>
+BTC/USDT-P   primary. Alert if &gt; 75000 (resistance) or
+             &lt; 70000 (last swing low).
+ETH/USDT-P   primary. Watching 3200 support.
+SOL/USDT-P   speculative only. Keep size &lt; $500.<span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- CHAPTER 3: AGENTS -->
+<div class="chapter" id="agents">
+  <span class="marker">III.</span>
+  <h2>Autonomous strategies. AI advisor.</h2>
+  <span class="hint">dca &middot; grid &middot; tpsl &middot; advisor</span>
+</div>
+
+<!-- 07 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">07</span>
+    <h3>Advisor agent, suggest-only</h3>
+    <span class="flavor">persistent session, --resume every tick</span>
+  </div>
+  <p class="caption">A long-running agent that watches the account and suggests moves. Never auto-executes in v0.1. Every tick resumes the same Claude session, so it can reference what it saw earlier.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi agent run advisor</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi agent run advisor --every 5m</span>
+
+<span class="h">Starting advisor agent.</span>
+  session       <span class="ac">9c1f-a7b2</span>  <span class="m">(persistent, will --resume)</span>
+  interval      5m
+  symbols       BTC/USDT-P, ETH/USDT-P
+  mode          <span class="or">suggest-only</span>  <span class="m">(will NOT auto-execute)</span>
+
+<span class="d">[10:00:03]</span> <span class="h">tick 1</span>  <span class="m">trigger=startup</span>
+  <span class="b">Suggestion:</span> Reduce ETH exposure from 0.42 to 0.21.
+  <span class="i">Reason: Funding flipped -0.012% 6h ago, historical mean</span>
+  <span class="i">reversion at ~18h. Partial close locks in gains with</span>
+  <span class="i">asymmetric upside if regime holds.</span>
+
+<span class="d">[10:05:08]</span> <span class="h">tick 2</span>  <span class="m">trigger=periodic</span>
+  <span class="d">No change suggested. Conditions unchanged.</span>
+
+<span class="d">[10:08:14]</span> <span class="h">tick 3</span>  <span class="m">trigger=fill:BTC/USDT-P</span>
+  BTC limit filled @ <span class="ac">72,000</span>. Entry noted.
+  <span class="b">Suggestion:</span> Place TP at 74,500 (+3.5%), SL at 71,200 (-1.1%).
+  <span class="i">Reason: Entry matches support. Target is prior resistance,</span>
+  <span class="i">stop is under the swing low. Risk-reward ~3:1.</span>
+
+<span class="d">Ctrl+C to stop.</span><span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- CHAPTER 4: DIRECT -->
+<div class="chapter" id="direct">
+  <span class="marker">IV.</span>
+  <h2>No AI needed if you know what you want.</h2>
+  <span class="hint">typed verbs bypass the planner</span>
+</div>
+
+<!-- 08 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">08</span>
+    <h3>Literal subcommand, no AI latency</h3>
+    <span class="flavor">market, account, trade, capital, stream &hellip;</span>
+  </div>
+  <p class="caption">Typed subcommands go straight to the SDK. Same tables, same colors, no Claude round-trip. The full command tree wraps every REST and WebSocket path in <code>hibachi-go</code>.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi market</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi market orderbook BTC/USDT-P --depth 5</span>
+
+<span class="h">BTC/USDT-P</span>  <span class="m">orderbook, depth 5, 10:12:44 UTC</span>
+<span class="rule">──────────────────────────────────────────────</span>
+      <span class="d">price</span>         <span class="d">size</span>       <span class="d">cum notional</span>
+  <span class="er">74,684.50</span>     0.482       $36,001
+  <span class="er">74,683.20</span>     1.104       $118,438
+  <span class="er">74,682.80</span>     0.311       $141,658
+  <span class="er">74,682.10</span>     0.058       $146,988
+  <span class="er">74,681.50</span>     0.092       $153,859
+<span class="rule">  ─ mid 74,680.80  spread 0.60 (0.8 bps) ─</span>
+  <span class="ok">74,680.10</span>     0.207       $15,458
+  <span class="ok">74,679.40</span>     0.688       $66,838
+  <span class="ok">74,678.00</span>     1.420       $172,853
+  <span class="ok">74,677.20</span>     0.094       $179,873
+  <span class="ok">74,676.50</span>     0.312       $203,181<span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- CHAPTER 5: DASHBOARD -->
+<div class="chapter" id="dash">
+  <span class="marker">V.</span>
+  <h2>One view, always on.</h2>
+  <span class="hint">bubbletea + lipgloss + ws feeds</span>
+</div>
+
+<!-- 09 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">09</span>
+    <h3>Live dashboard</h3>
+    <span class="flavor">hibachi dash</span>
+  </div>
+  <p class="caption">Account strip, positions, open orders, orderbook for the focused symbol, trade feed, watchlist with sparklines, advisor panel. Updates stream from <code>ws/market</code> and <code>ws/account</code>. Reconnects show as a small amber pill.</p>
+<div class="terminal dash">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi dash</div></div>
+<pre>┌─ <span class="b">hibachi</span>  <span class="m">acct 12345</span>  <span class="m">10:47:23 UTC</span>  <span class="ai">claude-code &middot; opus-4-7</span>  <span class="pill live">live</span> ───────────────────────────────────────┐
+│  balance <span class="b">$8,472.30</span>   free <span class="ac">$6,118.40</span>   used <span class="or">$2,353.90 (27.8%)</span>   lev <span class="or">2.1x</span>   realized <span class="ok">+$107.96</span>   unrealized <span class="ok">+$22.43</span>     │
+├── <span class="h">Positions</span> ────────────────────────────────────────────┬── <span class="h">BTC/USDT-P</span>  <span class="m">orderbook</span> ──────────────────────────────┤
+│  <span class="d">symbol       side    size     entry      mark       PnL</span> │     <span class="d">price         size       cum notional</span>           │
+│  BTC/USDT-P   <span class="ok">LONG</span>   0.015   72000.00   74680.80  <span class="ok">+40.21</span> │    <span class="er">74,684.50</span>     0.482        <span class="m">36,001</span>                  │
+│  ETH/USDT-P   <span class="er">SHORT</span>  0.210    3165.40    3147.40   <span class="ok">+3.78</span> │    <span class="er">74,683.20</span>     1.104       <span class="m">118,438</span>                  │
+│  SOL/USDT-P   <span class="ok">LONG</span>   3.200     142.80     139.20  <span class="er">-11.52</span> │    <span class="er">74,682.80</span>     0.311       <span class="m">141,658</span>                  │
+│                                                          │    <span class="er">74,682.10</span>     0.058       <span class="m">146,988</span>                  │
+│                                                          │    <span class="er">74,681.50</span>     0.092       <span class="m">153,859</span>                  │
+│  <span class="d">totals</span>     notional <span class="b">$2,353.90</span>    net PnL <span class="ok">+$32.47</span>        │   <span class="rule">─ mid 74,680.80  &middot;  spread 0.60  (0.8 bps) ─</span>          │
+├── <span class="h">Open orders</span> ──────────────────────────────────────────┤    <span class="ok">74,680.10</span>     0.207        <span class="m">15,458</span>                  │
+│  <span class="d">id       sym         side  price       size     age</span>     │    <span class="ok">74,679.40</span>     0.688        <span class="m">66,838</span>                  │
+│  8472910  BTC/USDT-P  <span class="ok">BID</span>   72000.00    0.014    1m12s   │    <span class="ok">74,678.00</span>     1.420       <span class="m">172,853</span>                  │
+│  8472905  ETH/USDT-P  <span class="er">ASK</span>    3200.00    0.200    4m01s   │    <span class="ok">74,677.20</span>     0.094       <span class="m">179,873</span>                  │
+│  8471801  SOL/USDT-P  <span class="ok">BID</span>     140.00    1.500   22m48s   │    <span class="ok">74,676.50</span>     0.312       <span class="m">203,181</span>                  │
+├── <span class="h">Recent trades</span> ────────────────────────────────────────┼── <span class="h">Watchlist</span> ─────────────────────────────────────────┤
+│  <span class="m">10:47:21</span>   BTC   <span class="ok">buy</span>    0.004   @ 74,680.40              │   <span class="b">[1]</span> BTC/USDT-P   74,680.80    <span class="ok">+2.13%</span>  <span class="ok">▁▂▃▅▆▇▇▆</span>   │
+│  <span class="m">10:47:18</span>   ETH   <span class="er">sell</span>   0.120   @  3,147.20              │   <span class="b">[2]</span> ETH/USDT-P    3,147.40    <span class="er">-0.58%</span>  <span class="er">▇▆▅▅▄▄▄▃</span>   │
+│  <span class="m">10:47:14</span>   BTC   <span class="ok">buy</span>    0.011   @ 74,680.10              │   <span class="b">[3]</span> SOL/USDT-P      139.20    <span class="er">-2.52%</span>  <span class="er">▇▇▆▅▄▃▂▂</span>   │
+│  <span class="m">10:47:09</span>   ETH   <span class="er">sell</span>   0.080   @  3,147.40              │                                                     │
+│  <span class="m">10:47:02</span>   BTC   <span class="ok">buy</span>    0.002   @ 74,680.20              │                                                     │
+├── <span class="h">Advisor</span>  <span class="m">session 9c1f-a7b2 &middot; tick 3 &middot; 10:08:14</span>  <span class="pill ai">ai</span> ────────────────────────────────────────────────────┤
+│  <span class="b">suggestion</span>  Place TP at <span class="ac">74,500</span> (+3.5%) and SL at <span class="ac">71,200</span> (-1.1%) on new BTC long.                                │
+│  <span class="d">reason</span>      Entry matches support. Target prior resistance; stop under swing low. Risk:reward ~3:1.                  │
+│  <span class="b">[a]</span> apply    <span class="b">[i]</span> ignore    <span class="b">[m]</span> modify                                                                       │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  <span class="d">[q]</span> quit   <span class="d">[tab]</span> focus   <span class="d">[/]</span> prompt   <span class="d">[b]</span> buy   <span class="d">[s]</span> sell   <span class="d">[c]</span> close   <span class="d">[x]</span> cancel   <span class="d">[a]</span> advisor   <span class="d">[?]</span> help</pre>
+</div>
+</section>
+
+<!-- 10 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">10</span>
+    <h3>Inline NL prompt from the dash</h3>
+    <span class="flavor">[/] overlay &middot; same planner, same memory</span>
+  </div>
+  <p class="caption">Inside the dash, hit <code>/</code> to drop an NL prompt overlay. The planner runs, preview renders on top of the live view, <code>y</code> fires, the dash below updates from the WS fill.</p>
+<div class="terminal dash">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi dash &middot; prompt overlay</div></div>
+<pre>┌─ <span class="b">hibachi</span>  <span class="m">acct 12345</span>  <span class="m">10:47:58 UTC</span>  <span class="ai">claude-code &middot; opus-4-7</span>  <span class="pill live">live</span> ───────────────────────────────────────┐
+│  balance $8,472.30   free $6,118.40   used $2,353.90   lev 2.1x   realized <span class="ok">+$107.96</span>   unrealized <span class="ok">+$22.43</span>       │
+├── Positions ────────────────────────────────────────────┬── BTC/USDT-P  orderbook ──────────────────────────────┤
+│  <span class="d">symbol       side    size     entry      mark       PnL</span> │                                                     │
+│  BTC/USDT-P   <span class="ok">LONG</span>   0.015   72000.00   74680.80  <span class="ok">+40.21</span> │          ┌── <span class="h">/</span> <span class="m">prompt</span> <span class="pill ai">ai</span> ────────────────────────┐  │
+│  ETH/USDT-P   <span class="er">SHORT</span>  0.210    3165.40    3147.40   <span class="ok">+3.78</span> │          │  <span class="ai">&#8250;</span> <span class="c">tp 3% sl 1.5% on my btc</span><span class="caret"></span>         │  │
+│  SOL/USDT-P   <span class="ok">LONG</span>   3.200     142.80     139.20  <span class="er">-11.52</span> │          └────────────────────────────────────┘  │
+│                                                          │                                                     │
+│                                                          │          ┌── <span class="h">plan</span> ────────────────────────────────────────┐
+│  <span class="d">totals</span>     notional $2,353.90    net PnL <span class="ok">+$32.47</span>        │          │  <span class="b">TPSL</span>  BTC/USDT-P  pos 0.015 LONG          │
+├── Open orders ──────────────────────────────────────────┤          │    TP   <span class="ac">74,160.00</span>   <span class="ok">+3.0%</span>   qty 0.015   │
+│  8472910  BTC/USDT-P  <span class="ok">BID</span>   72000.00    0.014    1m12s   │          │    SL   <span class="ac">70,920.00</span>   <span class="er">-1.5%</span>   qty 0.015   │
+│  8472905  ETH/USDT-P  <span class="er">ASK</span>    3200.00    0.200    4m01s   │          │                                          │
+│  8471801  SOL/USDT-P  <span class="ok">BID</span>     140.00    1.500   22m48s   │          │  <span class="i">"Standard bracket on the BTC long. TP at</span>   │
+├── Recent trades ────────────────────────────────────────┤          │  <span class="i">mark + 3%, SL at entry - 1.5%. R:R ~2:1."</span>  │
+│  <span class="m">10:47:21</span>   BTC   <span class="ok">buy</span>    0.004   @ 74,680.40              │          │                                          │
+│  <span class="m">10:47:18</span>   ETH   <span class="er">sell</span>   0.120   @  3,147.20              │          │  submit? <span class="b">[y]</span> / n / e / d                    │
+│  <span class="m">10:47:14</span>   BTC   <span class="ok">buy</span>    0.011   @ 74,680.10              │          └──────────────────────────────────────────┘
+│  <span class="m">10:47:09</span>   ETH   <span class="er">sell</span>   0.080   @  3,147.40              │                                                     │
+└──────────────────────────────────────────────────────────┴─────────────────────────────────────────────────────┘
+  <span class="d">[/]</span> prompt open   <span class="d">[esc]</span> cancel   <span class="d">[y]</span> submit   <span class="d">[e]</span> edit</pre>
+</div>
+</section>
+
+<!-- CHAPTER 6: BACKENDS -->
+<div class="chapter" id="backends">
+  <span class="marker">VI.</span>
+  <h2>Pick your brain.</h2>
+  <span class="hint">claude code &middot; openrouter &middot; any model</span>
+</div>
+
+<!-- 11 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">11</span>
+    <h3>Switchable AI backends</h3>
+    <span class="flavor">claude code &middot; openrouter</span>
+  </div>
+  <p class="caption">Two interchangeable planners. Claude Code uses the local <code>claude</code> binary with session resume. OpenRouter runs over HTTP with model choice across Anthropic, OpenAI, Google, Meta, and more. Memory carries across either.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi ai backend</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi ai backend</span>
+
+<span class="h">Current backend</span>
+  backend   <span class="ac">claude-code</span>
+  model     claude-opus-4-7
+  sessions  4 active    <span class="m">(3 oneshot, 1 advisor)</span>
+
+<span class="p">$</span> <span class="c">hibachi ai models list</span>
+
+<span class="h">Presets</span>  <span class="m">(safe for structured output)</span>
+  <span class="ok">&#9679;</span>  claude-code          claude-opus-4-7
+  <span class="d">&#9675;</span>  openrouter           anthropic/claude-opus-4.7
+  <span class="d">&#9675;</span>  openrouter           anthropic/claude-sonnet-4.6
+  <span class="d">&#9675;</span>  openrouter           openai/gpt-5
+  <span class="d">&#9675;</span>  openrouter           google/gemini-2.5-pro
+
+<span class="d">Use `hibachi ai models list --all` to query OpenRouter for the full catalog.</span>
+<span class="d">Non-preset models require --allow-any-model.</span>
+
+<span class="p">$</span> <span class="c">hibachi ai backend use openrouter --model openai/gpt-5</span>
+
+<span class="ok">[ok]</span> Backend switched.
+     backend   <span class="ac">openrouter</span>
+     model     <span class="ac">openai/gpt-5</span>
+     key       <span class="m">OPENROUTER_API_KEY (env)</span>
+     <span class="wn">note:</span>  new conversations will start fresh. Memory carries over.
+
+<span class="p">$</span> <span class="c">hibachi close my btc</span>
+
+<span class="d">Planning via openrouter &middot; openai/gpt-5 ...</span>
+
+<span class="h">Plan</span>
+<span class="rule">────</span>
+  <span class="b">MARKET SELL</span>  BTC/USDT-P  <span class="ac">0.0150</span>  <span class="m">(close long, mark 74,680)</span>
+  max fee  0.05%
+
+<span class="h">Memory read</span>
+  <span class="ai">user.md, lessons.md</span>  <span class="m">(same files, different model)</span>
+
+Submit? <span class="b">[y]</span>/n/e/d: <span class="c">y</span>
+
+<span class="ok">[ok]</span> Filled @ <span class="ac">74,678.90</span>. <span class="ok">+$18.35</span> realized.
+     usage: 1,284 in / 312 out &middot; $0.038 &middot; session <span class="ac">or-7e4b</span><span class="caret"></span></pre>
+</div>
+</section>
+
+<!-- 12 -->
+<section class="demo reveal">
+  <div class="label">
+    <span class="num">12</span>
+    <h3>Usage across backends</h3>
+    <span class="flavor">unified ledger</span>
+  </div>
+  <p class="caption">Token and cost accounting rolls up across both planners. OpenRouter reports usage directly. Claude Code reports via <code>--output-format json</code>.</p>
+<div class="terminal">
+  <div class="bar"><div class="dots"><span></span><span></span><span></span></div><div class="title">hibachi ai usage</div></div>
+<pre><span class="p">$</span> <span class="c">hibachi ai usage --today</span>
+
+<span class="h">Today</span>  <span class="m">2026-04-21, since 00:00 local</span>
+<span class="rule">─────────────────────────────────────────────────────────────────</span>
+  <span class="d">time    backend       model                           turns   cost</span>
+  10:04   claude-code   claude-opus-4-7                     2    $0.082
+  10:18   openrouter    openai/gpt-5                        1    $0.041
+  10:24   claude-code   claude-opus-4-7                     3    $0.134
+  10:31   openrouter    anthropic/claude-opus-4.7           3    $0.118
+  10:47   openrouter    openai/gpt-5                        1    $0.038
+<span class="rule">                                                             ─────────────</span>
+                                                           <span class="b">10</span>   <span class="b">$0.413</span>
+
+<span class="h">By backend</span>
+  claude-code                                               5    $0.216
+  openrouter                                                5    $0.197
+
+<span class="h">By model</span>
+  claude-opus-4-7                                           5    $0.216
+  openai/gpt-5                                              2    $0.079
+  anthropic/claude-opus-4.7                                 3    $0.118<span class="caret"></span></pre>
+</div>
+</section>
+
+<footer class="page">
+  <div class="brand-col">
+    <div class="brand">hibachi<span class="chev">&#8250;</span></div>
+    <p>Unofficial CLI for the Hibachi perpetual futures exchange. Not affiliated with Hibachi. Built on <a href="https://github.com/doedja/hibachi-go">hibachi-go</a>.</p>
+  </div>
+  <div class="col">
+    <div class="head">product</div>
+    <a href="https://github.com/doedja/hibachi-cli">repo</a>
+    <a href="https://github.com/doedja/hibachi-cli/releases">releases</a>
+    <a href="https://github.com/doedja/hibachi-cli/issues">issues</a>
+  </div>
+  <div class="col">
+    <div class="head">sdk</div>
+    <a href="https://github.com/doedja/hibachi-go">hibachi-go</a>
+    <a href="https://pkg.go.dev/github.com/doedja/hibachi-go">godoc</a>
+  </div>
+  <div class="col">
+    <div class="head">exchange</div>
+    <a href="https://hibachi.xyz">hibachi.xyz</a>
+    <a href="https://hibachi.xyz/r/hoshii">sign up</a>
+  </div>
+  <div class="meta-row">
+    <span class="note">v0.1 preview &middot; terminals are mockups, flows are real</span>
+    <span>MIT &middot; made by doedja</span>
+  </div>
+</footer>
+
+</main>
+
+<script>
+(function() {
+  // copy install
+  var btn = document.getElementById('copy-install');
+  if (btn) {
+    btn.addEventListener('click', function() {
+      var cmd = 'go install github.com/doedja/hibachi-cli@latest';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(cmd).then(function() { flash(); });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = cmd;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); flash(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+  }
+  function flash() {
+    btn.classList.add('copied');
+    btn.textContent = 'copied';
+    setTimeout(function() {
+      btn.classList.remove('copied');
+      btn.textContent = 'copy';
+    }, 1600);
+  }
+
+  // hero typing animation
+  var typed = document.getElementById('type-demo');
+  var out = document.getElementById('type-out');
+  if (typed && out && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    var demos = [
+      {
+        cmd: 'hibachi buy btc 100 usd at 72000',
+        out: 'LIMIT BUY 0.00138 BTC @ 72,000  (~$100)\nSubmit? [y]/n: ' + mark('y', 'ok') + '\n' + mark('[ok]', 'ok') + ' Resting on book. id 8472910'
+      },
+      {
+        cmd: "hibachi what's my pnl today",
+        out: 'Realized   ' + mark('+$142.30', 'ok') + '\nUnrealized ' + mark('-$18.04', 'er') + '\nNet        ' + mark('+$124.26', 'ok')
+      },
+      {
+        cmd: 'hibachi close my eth position',
+        out: 'MARKET BUY ETH/USDT-P 0.42 (close short)\nSubmit? [y]/n: ' + mark('y', 'ok') + '\n' + mark('[ok]', 'ok') + ' Filled @ 3,147.80. +$34 realized'
+      },
+      {
+        cmd: 'hibachi set tp 5% sl 2% on my btc',
+        out: 'TPSL  BTC/USDT-P\n  TP  78,414.84  (+5%)\n  SL  72,849.98  (-2%)\nSubmit? [y]/n: ' + mark('y', 'ok') + '\n' + mark('[ok]', 'ok') + ' TPSL attached'
+      }
+    ];
+    function mark(t, cls) {
+      var c = { ok: '#98c379', er: '#e06c75', dim: '#525762' }[cls] || '';
+      return '<span style="color:' + c + '">' + t + '</span>';
+    }
+
+    var i = 0;
+    function tick() {
+      typeOne(demos[i].cmd, demos[i].out, function() {
+        i = (i + 1) % demos.length;
+        setTimeout(tick, 2500);
+      });
+    }
+    function typeOne(text, outputHtml, done) {
+      typed.textContent = '';
+      out.innerHTML = '';
+      var idx = 0;
+      function step() {
+        if (idx < text.length) {
+          typed.textContent += text.charAt(idx++);
+          setTimeout(step, 32 + Math.random() * 42);
+        } else {
+          setTimeout(function() {
+            out.innerHTML = outputHtml;
+            done();
+          }, 420);
+        }
+      }
+      step();
+    }
+    tick();
+  }
+
+  // reveal on scroll
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(en) {
+        if (en.isIntersecting) {
+          en.target.classList.add('shown');
+          io.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -10% 0px' });
+    document.querySelectorAll('.reveal').forEach(function(el) { io.observe(el); });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function(el) { el.classList.add('shown'); });
+  }
+})();
+</script>
+
+</body>
+</html>
