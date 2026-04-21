@@ -4,8 +4,19 @@ hibachi
 /bin/
 *.log
 .DS_Store
+
+# Local Claude / tooling state
 .claude/
 CLAUDE.md
+
+# Local trading state (personal memory and journal must never be tracked)
+.hibachi/
+/memory/
+/journal.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 coverage.out
 *.test
 *.prof
