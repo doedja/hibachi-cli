@@ -173,8 +173,20 @@ func newAccountOrdersCmd() *cobra.Command {
 	return c
 }
 
+// orderReason returns the cancel reason for a cancelled order or the human
+// rejection string for a rejected order. Empty when neither applies.
+func orderReason(o hibachi.Order) string {
+	if o.CancelReason != nil && *o.CancelReason != "" {
+		return string(*o.CancelReason)
+	}
+	if o.RejectionReason != nil {
+		return *o.RejectionReason
+	}
+	return ""
+}
+
 func renderOrders(orders []hibachi.Order) {
-	headers := []string{"ID", "Symbol", "Side", "Type", "Price", "Qty", "Avail", "Status", "Flags"}
+	headers := []string{"ID", "Symbol", "Side", "Type", "Price", "Qty", "Avail", "Status", "Flags", "Reason"}
 	rows := make([][]string, 0, len(orders))
 	for _, o := range orders {
 		price := ""
@@ -199,6 +211,7 @@ func renderOrders(orders []hibachi.Order) {
 			o.AvailableQuantity,
 			string(o.Status),
 			flags,
+			orderReason(o),
 		})
 	}
 	output.PrintTable(headers, rows, output.NumericAligns(headers, "ID", "Price", "Qty", "Avail"))
@@ -250,6 +263,12 @@ func newAccountOrderCmd() *cobra.Command {
 			}
 			if ord.FinishTime != nil {
 				pairs = append(pairs, [2]string{"finished", formatTS(*ord.FinishTime)})
+			}
+			if ord.CancelReason != nil && *ord.CancelReason != "" {
+				pairs = append(pairs, [2]string{"cancel_reason", string(*ord.CancelReason)})
+			}
+			if ord.RejectionReason != nil && *ord.RejectionReason != "" {
+				pairs = append(pairs, [2]string{"rejection_reason", *ord.RejectionReason})
 			}
 			output.PrintKV(pairs)
 			return nil

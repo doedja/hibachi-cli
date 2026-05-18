@@ -492,7 +492,44 @@ func (m *Model) applyAccountEvent(e AccountEventMsg) {
 			}
 			m.snapshot.Balance = bal.Balance
 		}
+	case hibachi.EventOrderRequestRejected:
+		var r hibachi.OrderRequestRejected
+		if err := json.Unmarshal(e.Data, &r); err == nil {
+			reason := r.RejectionReason
+			if reason == "" && len(r.Error) > 0 {
+				reason = string(r.Error)
+			}
+			m.flashNotice(strings.TrimSpace(fmt.Sprintf("rejected %s: %s", r.Symbol, reason)))
+		}
+	case hibachi.EventOrderCancellation:
+		var c hibachi.OrderCancellation
+		// Only surface engine-initiated cancellations; user cancels are
+		// expected and would spam the banner.
+		if err := json.Unmarshal(e.Data, &c); err == nil && c.Reason != "" && c.Reason != hibachi.CancelReasonUserCanceled {
+			m.flashNotice(fmt.Sprintf("order %s cancelled: %s", c.OrderID, string(c.Reason)))
+		}
+	case hibachi.EventWithdrawRejection:
+		var w hibachi.WithdrawRejection
+		if err := json.Unmarshal(e.Data, &w); err == nil {
+			kind := "withdrawal"
+			if w.IsInstantWithdrawal {
+				kind = "instant withdrawal"
+			}
+			m.flashNotice(kind + " rejected")
+		}
+	case hibachi.EventTransferRejection:
+		var t hibachi.TransferRejection
+		if err := json.Unmarshal(e.Data, &t); err == nil {
+			m.flashNotice("transfer rejected")
+		}
 	}
+}
+
+// flashNotice shows a transient banner for ~6s. Used for rejection and
+// engine-cancellation events that the user needs to see.
+func (m *Model) flashNotice(text string) {
+	m.banner = text
+	m.bannerUntil = time.Now().Add(6 * time.Second)
 }
 
 func filterPending(orders []hibachi.Order) []hibachi.Order {

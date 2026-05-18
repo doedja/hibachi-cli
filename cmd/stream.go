@@ -302,9 +302,10 @@ func midPrice(bid, ask string) string {
 }
 
 // printTradeEvent supports three observed shapes:
-//   {"trade":{...}} (single event, the live stream shape)
-//   {"trades":[...]} (TradesResponse)
-//   {price,quantity,timestamp,takerSide} (bare Trade)
+//
+//	{"trade":{...}} (single event, the live stream shape)
+//	{"trades":[...]} (TradesResponse)
+//	{price,quantity,timestamp,takerSide} (bare Trade)
 func printTradeEvent(symbol string, data json.RawMessage) {
 	var wrapper struct {
 		Trade *hibachi.Trade `json:"trade"`
@@ -435,14 +436,52 @@ func summarizeAccountPayload(topic string, data json.RawMessage) string {
 			if o.Price != nil {
 				price = *o.Price
 			}
-			return fmt.Sprintf("id=%d %s %s %s status=%s px=%s avail=%s",
+			s := fmt.Sprintf("id=%d %s %s %s status=%s px=%s avail=%s",
 				o.OrderID, o.Symbol, string(o.Side), string(o.OrderType),
 				string(o.Status), price, o.AvailableQuantity)
+			if r := orderReason(o); r != "" {
+				s += " reason=" + r
+			}
+			return s
 		}
 	case "trade":
 		var t hibachi.AccountTrade
 		if err := json.Unmarshal(data, &t); err == nil && t.Symbol != "" {
 			return fmt.Sprintf("%s %s qty=%s px=%s", t.Symbol, string(t.Side), t.Quantity, t.Price)
+		}
+	case hibachi.EventOrderRequestRejected:
+		var r hibachi.OrderRequestRejected
+		if err := json.Unmarshal(data, &r); err == nil {
+			reason := r.RejectionReason
+			if reason == "" && len(r.Error) > 0 {
+				reason = string(r.Error)
+			}
+			return fmt.Sprintf("REJECTED id=%s %s type=%s: %s", r.OrderID, r.Symbol, r.RequestType, reason)
+		}
+	case hibachi.EventOrderCancellation:
+		var c hibachi.OrderCancellation
+		if err := json.Unmarshal(data, &c); err == nil {
+			return fmt.Sprintf("CANCELLED id=%s reason=%s", c.OrderID, string(c.Reason))
+		}
+	case hibachi.EventWithdrawRejection:
+		var w hibachi.WithdrawRejection
+		if err := json.Unmarshal(data, &w); err == nil {
+			kind := "withdrawal"
+			if w.IsInstantWithdrawal {
+				kind = "instant withdrawal"
+			}
+			if len(w.Error) > 0 {
+				return fmt.Sprintf("%s rejected: %s", kind, string(w.Error))
+			}
+			return kind + " rejected"
+		}
+	case hibachi.EventTransferRejection:
+		var t hibachi.TransferRejection
+		if err := json.Unmarshal(data, &t); err == nil {
+			if len(t.Error) > 0 {
+				return "transfer rejected: " + string(t.Error)
+			}
+			return "transfer rejected"
 		}
 	}
 	return string(data)

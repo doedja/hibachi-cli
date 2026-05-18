@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -461,8 +462,11 @@ func newTradeUpdateCmd() *cobra.Command {
 			}
 			upd.MaxFeesPercent = maxFees
 
+			// --deadline is seconds from now. The API expects an absolute
+			// microsecond timestamp (the legacy float-seconds format is
+			// rejected), so convert before sending.
 			if deadline != 0 {
-				d := deadline
+				d := time.Now().Add(time.Duration(deadline) * time.Second).UnixMicro()
 				upd.CreationDeadline = &d
 			}
 
@@ -538,7 +542,7 @@ func newTradeUpdateCmd() *cobra.Command {
 	c.Flags().StringVar(&priceStr, "price", "", "new price")
 	c.Flags().StringVar(&qtyStr, "qty", "", "new quantity")
 	c.Flags().StringVar(&sideStr, "side", "", "new side (BUY/SELL/BID/ASK)")
-	c.Flags().Int64Var(&deadline, "deadline", 0, "creation deadline unix seconds")
+	c.Flags().Int64Var(&deadline, "deadline", 0, "reject the order if not processed within N seconds (0 = no deadline)")
 	c.Flags().StringVar(&maxFee, "max-fee", "0.0005", "maximum fee as a decimal rate")
 	return c
 }
@@ -599,4 +603,3 @@ func renderPlaceResult(a *app.App, res *hibachi.PlaceOrderResult) error {
 	})
 	return nil
 }
-
