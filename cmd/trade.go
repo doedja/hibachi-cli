@@ -326,6 +326,44 @@ func newTradeCancelCmd() *cobra.Command {
 	return c
 }
 
+// cancelAllPending cancels every pending order and verifies the result. The
+// exchange's bulk DELETE /trade/order/all occasionally returns 200 but silently
+// no-ops, and per-order cancels are eventually consistent (an order can linger
+// for a second or two after a successful cancel). So this issues the bulk
+// cancel first, then re-checks and falls back to per-order cancels, retrying a
+// few rounds with a short settle delay. Returns the count still pending (0 on
+// full success).
+func cancelAllPending(ctx context.Context, c *hibachi.Client) (int, error) {
+	const rounds = 8
+	for round := 0; round < rounds; round++ {
+		pending, err := c.GetPendingOrders(ctx)
+		if err != nil {
+			return -1, err
+		}
+		if len(pending) == 0 {
+			return 0, nil
+		}
+		if round == 0 {
+			_ = c.CancelAllOrders(ctx) // bulk attempt first
+		} else {
+			for _, o := range pending { // per-order fallback for stragglers
+				id := o.OrderID
+				_ = c.CancelOrder(ctx, hibachi.CancelOrder{OrderID: &id})
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return len(pending), ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
+	pending, err := c.GetPendingOrders(ctx)
+	if err != nil {
+		return -1, err
+	}
+	return len(pending), nil
+}
+
 func newTradeCancelAllCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "cancel-all",
@@ -367,9 +405,16 @@ func newTradeCancelAllCmd() *cobra.Command {
 			}
 			defer j.Close()
 
-			if err := a.Client.CancelAllOrders(cmd.Context()); err != nil {
+			remaining, err := cancelAllPending(cmd.Context(), a.Client)
+			if err != nil {
 				setErrorOutcome(cmd.Context(), j, eventID, err)
 				return err
+			}
+			if remaining > 0 {
+				outcome, _ := json.Marshal(map[string]any{"status": "partial", "remaining": remaining})
+				_ = j.SetOutcome(cmd.Context(), eventID, outcome)
+				fmt.Printf("%d order(s) still pending after retries (exchange lag); re-run to clear\n", remaining)
+				return nil
 			}
 			outcome, _ := json.Marshal(map[string]any{"status": "cancelled_all"})
 			_ = j.SetOutcome(cmd.Context(), eventID, outcome)
