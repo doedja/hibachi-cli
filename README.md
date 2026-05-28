@@ -7,7 +7,9 @@ Built on [hibachi-go](https://github.com/doedja/hibachi-go).
 ## What it does
 
 - Wraps the full Hibachi SDK: market data, trading, capital, websockets.
+- Trades crypto and FX perpetuals. `market info` shows each market's category and, for FX, whether it is open and when it next closes.
 - Natural-language trading via Claude. Type what you want, get a plan, approve, fire.
+- Bundled strategy agents: `dca`, `grid`, `tpsl`, `advisor`.
 - Two AI backends you can switch between: local `claude` CLI, or OpenRouter with any model.
 - Persistent markdown memory so the AI gets smarter about how you trade.
 - SQLite journal of every plan, fill, and advisor run.
@@ -24,6 +26,10 @@ go install github.com/doedja/hibachi-cli@latest
 hibachi auth login
 hibachi market price BTC/USDT-P
 hibachi buy btc 100 usd at 72000
+
+# FX perps: check the session is open, then trade
+hibachi market price EUR/USDT-P
+hibachi buy eur 5 usd at 1.16
 ```
 
 ## Sign up

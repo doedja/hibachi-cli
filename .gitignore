@@ -17,6 +17,11 @@ CLAUDE.md
 *.db-wal
 *.db-shm
 
+# Private credentials and local-only strategies (never push)
+fx.env.md
+/internal/strategies/mm/
+/cmd/agent_mm.go
+
 coverage.out
 *.test
 *.prof

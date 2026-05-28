@@ -23,6 +23,7 @@ func newMarketCmd() *cobra.Command {
 		newMarketTradesCmd(),
 		newMarketKlinesCmd(),
 		newMarketOpenInterestCmd(),
+		newMarketFundingRatesCmd(),
 	)
 	return c
 }
@@ -43,21 +44,30 @@ func newMarketInfoCmd() *cobra.Command {
 			if a.JSON {
 				return output.PrintJSON(info)
 			}
-			headers := []string{"Symbol", "ID", "Status", "Tick", "Step", "MinNotional", "UDec", "SDec"}
+			now := time.Now().UTC()
+			headers := []string{"Symbol", "ID", "Cat", "Mkt", "Tick", "Step", "MinNotional", "NextClose"}
 			rows := make([][]string, 0, len(info.FutureContracts))
 			for _, f := range info.FutureContracts {
+				mkt := "OPEN"
+				if !f.MarketOpen(now) {
+					mkt = "CLOSED"
+				}
+				nextClose := "24/7"
+				if t, ok := f.NextClose(); ok {
+					nextClose = t.Format("Mon 15:04Z")
+				}
 				rows = append(rows, []string{
 					f.Symbol,
 					strconv.Itoa(f.ID),
-					f.Status,
+					f.Category,
+					mkt,
 					f.TickSize,
 					f.StepSize,
 					f.MinNotional,
-					strconv.Itoa(f.UnderlyingDecimals),
-					strconv.Itoa(f.SettlementDecimals),
+					nextClose,
 				})
 			}
-			aligns := output.NumericAligns(headers, "ID", "Tick", "Step", "MinNotional", "UDec", "SDec")
+			aligns := output.NumericAligns(headers, "ID", "Tick", "Step", "MinNotional")
 			output.PrintTable(headers, rows, aligns)
 			return nil
 		},
@@ -94,6 +104,31 @@ func newMarketPriceCmd() *cobra.Command {
 					[2]string{"funding_rate_est", p.FundingRateEstimation.EstimatedFundingRate},
 					[2]string{"next_funding_ts", formatTS(p.FundingRateEstimation.NextFundingTimestamp)},
 				)
+			}
+			// For FX symbols, surface market-hours context so a caller knows
+			// whether the market is tradeable and when it next closes. Crypto
+			// trades 24/7 and adds no rows. Best-effort: ignore lookup errors.
+			if info, err := a.Client.GetExchangeInfo(cmd.Context()); err == nil {
+				for i := range info.FutureContracts {
+					f := info.FutureContracts[i]
+					if f.Symbol != args[0] || !f.IsFX() {
+						continue
+					}
+					now := time.Now().UTC()
+					pairs = append(pairs, [2]string{"category", f.Category})
+					if f.MarketOpen(now) {
+						pairs = append(pairs, [2]string{"market", "OPEN"})
+					} else {
+						pairs = append(pairs, [2]string{"market", "CLOSED"})
+					}
+					if t, ok := f.NextClose(); ok {
+						pairs = append(pairs, [2]string{"next_close", t.Format(time.RFC3339)})
+					}
+					if d, ok := f.TimeToClose(now); ok {
+						pairs = append(pairs, [2]string{"time_to_close", d.Round(time.Minute).String()})
+					}
+					break
+				}
 			}
 			output.PrintKV(pairs)
 			return nil
@@ -210,16 +245,21 @@ func newMarketTradesCmd() *cobra.Command {
 
 func newMarketKlinesCmd() *cobra.Command {
 	var interval string
+	var fromSec, toSec int64
 	c := &cobra.Command{
 		Use:   "klines [symbol]",
-		Short: "Candles",
+		Short: "Candles (OHLC); optional historical range with --from/--to",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a := app.From(cmd.Context())
 			if err := a.EnsureClient(); err != nil {
 				return err
 			}
-			k, err := a.Client.GetKlines(cmd.Context(), args[0], hibachi.Interval(interval))
+			var opts []hibachi.KlineOption
+			if fromSec > 0 || toSec > 0 {
+				opts = append(opts, hibachi.WithKlineRange(fromSec*1000, toSec*1000))
+			}
+			k, err := a.Client.GetKlines(cmd.Context(), args[0], hibachi.Interval(interval), opts...)
 			if err != nil {
 				return err
 			}
@@ -244,6 +284,53 @@ func newMarketKlinesCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&interval, "interval", "1min", "kline interval (1min, 5min, 15min, 1h, 4h, 1d, 1w)")
+	c.Flags().Int64Var(&fromSec, "from", 0, "range start (unix seconds); 0 = open")
+	c.Flags().Int64Var(&toSec, "to", 0, "range end (unix seconds); 0 = open")
+	return c
+}
+
+func newMarketFundingRatesCmd() *cobra.Command {
+	var limit int
+	var fromSec, toSec int64
+	c := &cobra.Command{
+		Use:   "funding-rates [symbol]",
+		Short: "Historical realized funding rates",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			a := app.From(cmd.Context())
+			if err := a.EnsureClient(); err != nil {
+				return err
+			}
+			var opts []hibachi.FundingRateOption
+			if limit > 0 {
+				opts = append(opts, hibachi.WithFundingLimit(limit))
+			}
+			if fromSec > 0 || toSec > 0 {
+				opts = append(opts, hibachi.WithFundingRange(fromSec, toSec))
+			}
+			fr, err := a.Client.GetFundingRates(cmd.Context(), args[0], opts...)
+			if err != nil {
+				return err
+			}
+			if a.JSON {
+				return output.PrintJSON(fr)
+			}
+			headers := []string{"Time", "FundingRate", "IndexPrice"}
+			rows := make([][]string, 0, len(fr))
+			for _, f := range fr {
+				rows = append(rows, []string{
+					formatTS(int64(f.FundingTimestamp)),
+					f.FundingRate,
+					f.IndexPrice,
+				})
+			}
+			output.PrintTable(headers, rows, output.NumericAligns(headers, "FundingRate", "IndexPrice"))
+			return nil
+		},
+	}
+	c.Flags().IntVar(&limit, "limit", 20, "max records")
+	c.Flags().Int64Var(&fromSec, "from", 0, "range start (unix seconds)")
+	c.Flags().Int64Var(&toSec, "to", 0, "range end (unix seconds)")
 	return c
 }
 
