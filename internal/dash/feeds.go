@@ -188,7 +188,7 @@ func initialRESTPump(ctx context.Context, deps Deps, send func(tea.Msg)) {
 		send(PendingOrdersMsg{Orders: orders})
 	}
 	if deps.InitialSym != "" {
-		if ob, err := deps.Client.GetOrderbook(ctx, deps.InitialSym, 12, 0); err == nil {
+		if ob, err := deps.Client.GetOrderbook(ctx, deps.InitialSym, 12, ""); err == nil {
 			send(OrderbookMsg{Symbol: deps.InitialSym, Book: ob})
 		}
 	}

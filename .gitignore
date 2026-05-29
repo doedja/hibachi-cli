@@ -25,3 +25,4 @@ fx.env.md
 coverage.out
 *.test
 *.prof
+.handoff/

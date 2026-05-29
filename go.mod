@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/doedja/hibachi-go v0.2.0
+	github.com/doedja/hibachi-go v0.3.0
 	github.com/fatih/color v1.19.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-isatty v0.0.21

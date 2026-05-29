@@ -165,7 +165,8 @@ func newMarketStatsCmd() *cobra.Command {
 }
 
 func newMarketOrderbookCmd() *cobra.Command {
-	var depth, granularity int
+	var depth int
+	var granularity string
 	c := &cobra.Command{
 		Use:   "orderbook [symbol]",
 		Short: "Orderbook snapshot",
@@ -175,14 +176,9 @@ func newMarketOrderbookCmd() *cobra.Command {
 			if err := a.EnsureClient(); err != nil {
 				return err
 			}
-			g := granularity
-			if g == 0 {
-				// Server rejects granularity=0 with a list of valid values per
-				// contract. 1 is valid for every current symbol. Pass --granularity
-				// explicitly to get finer buckets.
-				g = 1
-			}
-			ob, err := a.Client.GetOrderbook(cmd.Context(), args[0], depth, g)
+			// Empty granularity lets the SDK auto-pick a valid bucket for the
+			// contract (works for crypto and FX).
+			ob, err := a.Client.GetOrderbook(cmd.Context(), args[0], depth, granularity)
 			if err != nil {
 				return err
 			}
@@ -197,7 +193,7 @@ func newMarketOrderbookCmd() *cobra.Command {
 		},
 	}
 	c.Flags().IntVar(&depth, "depth", 20, "number of price levels")
-	c.Flags().IntVar(&granularity, "granularity", 0, "price granularity (contract-defined; 0 defaults to 1)")
+	c.Flags().StringVar(&granularity, "granularity", "", "price granularity string (contract-defined, e.g. 1 or 0.00001 for FX; empty auto-picks)")
 	return c
 }
 
