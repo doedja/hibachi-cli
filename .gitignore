@@ -19,6 +19,7 @@ CLAUDE.md
 
 # Private credentials and local-only strategies (never push)
 fx.env.md
+crypto.env.md
 /internal/strategies/mm/
 /cmd/agent_mm.go
 
